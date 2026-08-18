@@ -146,6 +146,20 @@ export default function MessageBubble({
               {message.media.type === "voice" && (
                 <audio src={message.media.url} controls className="w-full min-w-[200px]" />
               )}
+              {message.media.type === "video_message" && (
+                <div className="flex justify-center py-1">
+                  <div className="w-48 h-48 rounded-full overflow-hidden border-2 border-gray-500 shadow-lg">
+                    <video
+                      src={message.media.url}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
               {message.media.type === "file" && (
                 <a
                   href={message.media.url}

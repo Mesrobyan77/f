@@ -10,7 +10,7 @@ export interface User {
 }
 
 export interface Media {
-  type: "image" | "video" | "audio" | "file" | "voice" | "gif" | "sticker";
+  type: "image" | "video" | "audio" | "file" | "voice" | "video_message" | "gif" | "sticker";
   url: string;
   name: string;
   size: number;
