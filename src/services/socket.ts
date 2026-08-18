@@ -4,7 +4,7 @@ let socket: Socket | null = null;
 
 export function getSocket(token: string): Socket {
   if (!socket) {
-    socket = io("http://localhost:7772", {
+    socket = io("https://b-lefx.onrender.com", {
       auth: { token },
       transports: ["websocket", "polling"],
     });
