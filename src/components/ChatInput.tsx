@@ -235,7 +235,7 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
             typeof m.user === "object" ? (
               <button
                 key={m.user._id}
-                onClick={() => handleMentionSelect("username" in m.user ? m.user.username : "")}
+                onClick={() => { if (typeof m.user === "object") handleMentionSelect(m.user.username); }}
                 className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm text-white"
               >
                 @{m.user.username}

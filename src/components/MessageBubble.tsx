@@ -59,7 +59,6 @@ export default function MessageBubble({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
         setShowEmojiPicker(false);
       }
     };
@@ -281,7 +280,7 @@ export default function MessageBubble({
             {isOwn && (
               <>
                 <button
-                  onClick={() => { setEditing(true); setShowMenu(false); }}
+                  onClick={() => { setEditing(true); }}
                   className="p-1.5 hover:bg-gray-700 rounded text-gray-300 hover:text-white text-xs flex items-center gap-1"
                   title="Edit"
                 >
@@ -290,7 +289,7 @@ export default function MessageBubble({
                   </svg>
                 </button>
                 <button
-                  onClick={() => { onDelete?.(message._id); setShowMenu(false); }}
+                  onClick={() => { onDelete?.(message._id); }}
                   className="p-1.5 hover:bg-red-600 rounded text-gray-300 hover:text-white text-xs flex items-center gap-1"
                   title="Delete"
                 >
