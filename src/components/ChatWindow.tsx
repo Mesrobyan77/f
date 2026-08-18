@@ -2,6 +2,8 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import Avatar from "./Avatar";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
+import PollCard from "./PollCard";
+import GroupSettingsPanel from "./GroupSettingsPanel";
 import { useAuth } from "../context/AuthContext";
 import { conversationAPI } from "../services/api";
 import type { Message, ConversationData } from "../types";
@@ -22,11 +24,14 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
   const [searchQuery, setSearchQuery] = useState("");
   const [showPinned, setShowPinned] = useState(false);
   const [searchResults, setSearchResults] = useState<Message[]>([]);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [showTopics, setShowTopics] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = async (search?: string) => {
+  const fetchMessages = async (search?: string, topicId?: string) => {
     try {
-      const res = await conversationAPI.getMessages(conversationId, search);
+      const res = await conversationAPI.getMessages(conversationId, search, topicId);
       setMessages(res.data.messages);
     } catch (err) {
       console.error(err);
@@ -48,7 +53,12 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
   useEffect(() => {
     fetchMessages();
     fetchConversation();
+    setActiveTopic(null);
   }, [conversationId]);
+
+  useEffect(() => {
+    fetchMessages(undefined, activeTopic === null ? undefined : activeTopic || undefined);
+  }, [activeTopic]);
 
   useEffect(() => {
     if (!socket) return;
@@ -57,7 +67,9 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
 
     const handleReceiveMessage = (data: { message: Message; conversationId: string }) => {
       if (data.conversationId === conversationId) {
-        setMessages((prev) => [...prev, data.message]);
+        if (!activeTopic || data.message.topicId === activeTopic || (activeTopic === "general" && !data.message.topicId)) {
+          setMessages((prev) => [...prev, data.message]);
+        }
         socket.emit("mark_read", { conversationId });
       }
     };
@@ -121,6 +133,12 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
       }
     };
 
+    const handlePollUpdated = (data: { poll: any; conversationId: string }) => {
+      if (data.conversationId === conversationId) {
+        fetchMessages();
+      }
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("user_typing", handleTyping);
     socket.on("user_stop_typing", handleStopTyping);
@@ -129,6 +147,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
     socket.on("message_deleted", handleMessageDeleted);
     socket.on("reaction_updated", handleReactionUpdated);
     socket.on("message_pinned", handleMessagePinned);
+    socket.on("poll_updated", handlePollUpdated);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
@@ -139,8 +158,9 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
       socket.off("message_deleted", handleMessageDeleted);
       socket.off("reaction_updated", handleReactionUpdated);
       socket.off("message_pinned", handleMessagePinned);
+      socket.off("poll_updated", handlePollUpdated);
     };
-  }, [socket, conversationId, user]);
+  }, [socket, conversationId, user, activeTopic]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,10 +208,32 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
 
   const displayMessages = searchResults.length > 0 ? searchResults : messages;
 
+  const myMember = conversation?.members?.find((m) => {
+    if (typeof m.user === "object") return m.user._id === user?._id;
+    return m.user === user?._id;
+  });
+
+  const isMuted = myMember?.muted && (!myMember.mutedUntil || new Date(myMember.mutedUntil) > new Date());
+
+  const roleBadge = (role?: string) => {
+    if (!role || role === "member") return null;
+    const colors: Record<string, string> = {
+      owner: "text-yellow-400",
+      admin: "text-blue-400",
+      moderator: "text-purple-400",
+    };
+    return (
+      <span className={`text-[10px] font-medium ${colors[role] || ""}`}>
+        {role === "owner" ? "👑" : role === "admin" ? "🛡️" : "⚡"}
+      </span>
+    );
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-950">
       {conversation && (
         <>
+          {/* Header */}
           <div className="flex items-center gap-2 md:gap-3 px-3 md:px-6 py-3 border-b border-gray-700 bg-gray-900">
             {onBack && (
               <button
@@ -208,7 +250,10 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
               online={conversation.online}
             />
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-white text-sm truncate">{conversation.name}</h3>
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-semibold text-white text-sm truncate">{conversation.name}</h3>
+                {myMember && roleBadge(myMember.role)}
+              </div>
               <p className="text-xs text-gray-400">
                 {typing
                   ? `${typing} գրում է...`
@@ -219,6 +264,19 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
                   : `Last seen ${lastSeen}`}
               </p>
             </div>
+
+            {/* Topics toggle for groups */}
+            {conversation.isGroup && conversation.topics && conversation.topics.length > 0 && (
+              <button
+                onClick={() => setShowTopics(!showTopics)}
+                className={`hidden sm:block p-2 rounded-lg transition-colors ${showTopics ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}
+                title="Topics"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+              </button>
+            )}
 
             {conversation.pinnedMessages && conversation.pinnedMessages.length > 0 && (
               <button
@@ -253,12 +311,24 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
               )}
             </div>
 
+            {/* Group settings button */}
+            {conversation.isGroup && (myMember?.role === "owner" || myMember?.role === "admin") && (
+              <button
+                onClick={() => setShowGroupSettings(true)}
+                className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
+                title="Group settings"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+
             {!conversation.isGroup && conversation.otherUser && (
               <div className="flex items-center gap-1 md:gap-2">
                 <button
-                  onClick={() =>
-                    onCall(conversation.otherUser!._id, conversation.name, "audio")
-                  }
+                  onClick={() => onCall(conversation.otherUser!._id, conversation.name, "audio")}
                   className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
                   title="Voice call"
                 >
@@ -267,9 +337,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
                   </svg>
                 </button>
                 <button
-                  onClick={() =>
-                    onCall(conversation.otherUser!._id, conversation.name, "video")
-                  }
+                  onClick={() => onCall(conversation.otherUser!._id, conversation.name, "video")}
                   className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800"
                   title="Video call"
                 >
@@ -281,6 +349,40 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             )}
           </div>
 
+          {/* Topics sidebar */}
+          {showTopics && conversation.topics && (
+            <div className="border-b border-gray-700 bg-gray-900/50 px-3 md:px-6 py-2 flex gap-2 overflow-x-auto">
+              <button
+                onClick={() => setActiveTopic(null)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeTopic === null ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActiveTopic("general")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeTopic === "general" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
+              >
+                # General
+              </button>
+              {conversation.topics.map((topic) => (
+                <button
+                  key={topic._id}
+                  onClick={() => setActiveTopic(topic._id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    activeTopic === topic._id ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  # {topic.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Pinned messages */}
           {showPinned && conversation.pinnedMessages && conversation.pinnedMessages.length > 0 && (
             <div className="px-3 md:px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/50">
               <p className="text-xs text-yellow-400 font-semibold mb-1">📌 Pinned Messages</p>
@@ -295,32 +397,94 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             </div>
           )}
 
+          {/* Muted warning */}
+          {isMuted && (
+            <div className="px-3 md:px-6 py-2 bg-yellow-500/10 border-b border-yellow-500/30">
+              <p className="text-xs text-yellow-400 text-center">You are muted in this group</p>
+            </div>
+          )}
+
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4">
-            {displayMessages.map((msg) => (
-              <MessageBubble
-                key={msg._id}
-                message={msg}
-                isOwn={
-                  typeof msg.sender === "string"
-                    ? msg.sender === user?._id
-                    : msg.sender._id === user?._id
+            {displayMessages.map((msg) => {
+              if (msg.type === "poll" && msg.media) {
+                try {
+                  const pollData = JSON.parse(msg.media.url);
+                  return (
+                    <div key={msg._id} className="mb-3">
+                      <p className="text-xs text-gray-500 mb-1">
+                        {typeof msg.sender === "object" ? msg.sender.username : ""} created a poll
+                      </p>
+                      <PollCard
+                        poll={{
+                          _id: pollData.pollId,
+                          question: msg.text.replace("📊 Poll: ", ""),
+                          options: [],
+                          createdBy: typeof msg.sender === "object" ? msg.sender._id : "",
+                          closed: false,
+                          createdAt: msg.createdAt,
+                          updatedAt: msg.createdAt,
+                        }}
+                        conversationId={conversationId}
+                      />
+                    </div>
+                  );
+                } catch {
+                  return null;
                 }
-                onReply={setReplyTo}
-                onPin={handlePin}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onReact={handleReact}
-              />
-            ))}
+              }
+
+              if (msg.type === "welcome") {
+                return (
+                  <div key={msg._id} className="flex justify-center mb-3">
+                    <div className="px-4 py-2 bg-gray-800/50 rounded-full">
+                      <p className="text-xs text-gray-400 text-center">{msg.text}</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <MessageBubble
+                  key={msg._id}
+                  message={msg}
+                  isOwn={
+                    typeof msg.sender === "string"
+                      ? msg.sender === user?._id
+                      : msg.sender._id === user?._id
+                  }
+                  onReply={setReplyTo}
+                  onPin={handlePin}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onReact={handleReact}
+                />
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Input */}
           <ChatInput
             conversationId={conversationId}
             replyTo={replyTo}
             onClearReply={() => setReplyTo(null)}
             members={conversation.members}
+            topicId={activeTopic}
+            isMuted={isMuted}
           />
+
+          {/* Group settings modal */}
+          {showGroupSettings && (
+            <GroupSettingsPanel
+              conversation={conversation}
+              onClose={() => setShowGroupSettings(false)}
+              onUpdate={(updated) => {
+                setConversation(updated);
+                setShowGroupSettings(false);
+              }}
+            />
+          )}
         </>
       )}
     </div>

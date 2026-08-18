@@ -7,6 +7,8 @@ interface ChatInputProps {
   replyTo: Message | null;
   onClearReply: () => void;
   members?: { user: { _id: string; username: string } | string }[];
+  topicId?: string | null;
+  isMuted?: boolean;
 }
 
 const EMOJI_LIST = [
@@ -16,7 +18,7 @@ const EMOJI_LIST = [
   "🤩", "😴", "🤯", "💀", "👻", "🤖", "👽", "🎃",
 ];
 
-export default function ChatInput({ conversationId, replyTo, onClearReply, members }: ChatInputProps) {
+export default function ChatInput({ conversationId, replyTo, onClearReply, members, topicId, isMuted }: ChatInputProps) {
   const { socket } = useAuth();
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -76,6 +78,10 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
       text: trimmed,
     };
 
+    if (topicId) {
+      data.topicId = topicId === "general" ? null : topicId;
+    }
+
     if (replyTo) {
       data.replyTo = replyTo._id;
     }
@@ -90,6 +96,10 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
       const mentionedIds: string[] = [];
       mentionMatches.forEach((match) => {
         const username = match.slice(1);
+        if (username.toLowerCase() === "everyone" || username.toLowerCase() === "all") {
+          mentionedIds.push("everyone");
+          return;
+        }
         const member = members.find(
           (m) =>
             typeof m.user === "object" &&
@@ -319,6 +329,8 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
     return m.user.username.toLowerCase().includes(mentionFilter.toLowerCase());
   });
 
+  const showEveryone = "everyone".includes(mentionFilter.toLowerCase()) || "all".includes(mentionFilter.toLowerCase());
+
   const ttlOptions = [
     { value: 0, label: "Off" },
     { value: 30, label: "30s" },
@@ -351,9 +363,18 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
         </div>
       )}
 
-      {showMentions && filteredMembers && filteredMembers.length > 0 && (
+      {showMentions && (
         <div className="mb-2 bg-gray-800 rounded-lg border border-gray-600 max-h-40 overflow-y-auto">
-          {filteredMembers.map((m) =>
+          {showEveryone && (
+            <button
+              onClick={() => handleMentionSelect("everyone")}
+              className="w-full text-left px-3 py-2 hover:bg-gray-700 text-sm text-white flex items-center gap-2"
+            >
+              <span className="text-yellow-400">📢</span>
+              @Everyone
+            </button>
+          )}
+          {filteredMembers && filteredMembers.map((m) =>
             typeof m.user === "object" ? (
               <button
                 key={m.user._id}
@@ -498,9 +519,9 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            placeholder={recording ? "Recording voice..." : videoRecording ? "Recording video..." : "Type a message..."}
+            placeholder={isMuted ? "You are muted..." : recording ? "Recording voice..." : videoRecording ? "Recording video..." : "Type a message..."}
             rows={1}
-            disabled={recording || videoRecording}
+            disabled={recording || videoRecording || isMuted}
             className="w-full bg-gray-800 text-gray-200 text-sm rounded-xl px-4 py-3 border border-gray-700 focus:outline-none focus:border-blue-500 transition-colors resize-none disabled:opacity-50"
           />
         </div>

@@ -28,6 +28,8 @@ export interface Message {
   conversation: string;
   sender: User | string;
   text: string;
+  type: "message" | "system" | "poll" | "welcome";
+  topicId?: string | null;
   read: boolean;
   edited: boolean;
   editedAt?: string;
@@ -47,14 +49,64 @@ export interface Message {
 
 export interface Member {
   user: User | string;
-  role: "admin" | "moderator" | "member";
+  role: "owner" | "admin" | "moderator" | "member";
   joinedAt: string;
+  muted: boolean;
+  mutedUntil?: string | null;
+  banned: boolean;
+  bannedAt?: string | null;
+}
+
+export interface Topic {
+  _id: string;
+  name: string;
+  description: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PollOption {
+  _id: string;
+  text: string;
+  votes: string[];
+}
+
+export interface Poll {
+  _id: string;
+  question: string;
+  options: PollOption[];
+  createdBy: string;
+  closed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Permissions {
+  "谁能发消息": "everyone" | "admins" | "owner";
+  "谁能发媒体": "everyone" | "admins" | "owner";
+  "谁能编辑群信息": "admins" | "owner";
+  "谁能邀请成员": "everyone" | "admins" | "owner";
+  "谁能置顶消息": "admins" | "owner";
+  "谁能创建投票": "everyone" | "admins" | "owner";
+}
+
+export interface InviteLink {
+  _id: string;
+  code: string;
+  createdBy: string;
+  maxUses: number;
+  uses: number;
+  expiresAt?: string | null;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface ConversationData {
   _id: string;
   name: string;
   avatar: string;
+  description: string;
   online: boolean;
   lastMessage: string;
   lastMessageAt: string;
@@ -62,6 +114,11 @@ export interface ConversationData {
   isGroup: boolean;
   admin?: User | string;
   members?: Member[];
+  permissions?: Permissions;
+  topics?: Topic[];
+  polls?: Poll[];
+  welcomeMessage?: string;
+  inviteLinks?: InviteLink[];
   pinnedMessages: Message[];
   otherUser: {
     _id: string;
