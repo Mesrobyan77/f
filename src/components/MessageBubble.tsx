@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import type { Message, Reaction } from "../types";
+import type { Message } from "../types";
 
 interface MessageBubbleProps {
   message: Message;
@@ -24,7 +24,6 @@ export default function MessageBubble({
   onReact,
 }: MessageBubbleProps) {
   const { user, socket } = useAuth();
-  const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
