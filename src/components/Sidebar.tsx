@@ -132,8 +132,8 @@ export default function Sidebar({ activeId, onSelect }: SidebarProps) {
   );
 
   return (
-    <aside className="w-80 bg-gray-900 border-r border-gray-700 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-700">
+    <aside className="w-full md:w-80 bg-gray-900 border-r border-gray-700 flex flex-col h-full">
+      <div className="p-3 md:p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-white">Messages</h2>
           <div className="flex gap-1">

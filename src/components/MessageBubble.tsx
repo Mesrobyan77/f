@@ -28,6 +28,7 @@ export default function MessageBubble({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const senderName =
@@ -60,6 +61,7 @@ export default function MessageBubble({
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
+        setShowMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -89,8 +91,11 @@ export default function MessageBubble({
   }
 
   return (
-    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3 group relative`}>
-      <div className="max-w-md relative">
+    <div
+      className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3 group relative`}
+      onClick={() => setShowMenu((v) => !v)}
+    >
+      <div className="max-w-[85vw] md:max-w-md relative">
         {message.replyTo && typeof message.replyTo === "object" && (
           <div className={`mb-1 px-3 py-1.5 rounded-t-xl text-xs border-l-2 ${
             isOwn
@@ -247,7 +252,7 @@ export default function MessageBubble({
 
         <div
           ref={menuRef}
-          className={`absolute top-0 ${isOwn ? "left-0 -translate-x-full -ml-1" : "right-0 translate-x-full mr-1"} opacity-0 group-hover:opacity-100 transition-opacity z-10`}
+          className={`absolute top-0 ${isOwn ? "left-0 -translate-x-full -ml-1" : "right-0 translate-x-full mr-1"} opacity-0 group-hover:opacity-100 ${showMenu ? "opacity-100" : ""} transition-opacity z-10`}
         >
           <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl flex flex-col p-0.5">
             <button

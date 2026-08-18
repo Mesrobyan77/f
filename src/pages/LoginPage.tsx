@@ -25,9 +25,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-700">
+        <div className="bg-gray-900 rounded-2xl p-6 md:p-8 border border-gray-700">
           <h1 className="text-2xl font-bold text-white text-center mb-8">Sign In</h1>
 
           {error && (

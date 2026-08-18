@@ -14,3 +14,13 @@ html.light {
   --text-secondary: #6b7280;
   --border-color: #d1d5db;
 }
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input, textarea, button {
+    font-size: 16px;
+  }
+}

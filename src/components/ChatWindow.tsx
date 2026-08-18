@@ -11,9 +11,10 @@ interface ChatWindowProps {
   onCall: (targetUserId: string, targetName: string, callType: "audio" | "video") => void;
   replyTo: Message | null;
   setReplyTo: (msg: Message | null) => void;
+  onBack?: () => void;
 }
 
-export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo }: ChatWindowProps) {
+export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo, onBack }: ChatWindowProps) {
   const { user, socket } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<ConversationData | null>(null);
@@ -191,7 +192,17 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
     <div className="flex-1 flex flex-col h-full bg-gray-950">
       {conversation && (
         <>
-          <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-700 bg-gray-900">
+          <div className="flex items-center gap-2 md:gap-3 px-3 md:px-6 py-3 border-b border-gray-700 bg-gray-900">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="md:hidden p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors -ml-1"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
             <Avatar
               initials={conversation.name.charAt(0).toUpperCase()}
               online={conversation.online}
@@ -212,7 +223,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             {conversation.pinnedMessages && conversation.pinnedMessages.length > 0 && (
               <button
                 onClick={() => setShowPinned(!showPinned)}
-                className={`p-2 rounded-lg transition-colors ${showPinned ? "bg-yellow-600 text-white" : "text-yellow-400 hover:bg-gray-800"}`}
+                className={`hidden sm:block p-2 rounded-lg transition-colors ${showPinned ? "bg-yellow-600 text-white" : "text-yellow-400 hover:bg-gray-800"}`}
                 title="Pinned messages"
               >
                 <svg className="w-5 h-5" fill={showPinned ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
@@ -221,7 +232,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
               </button>
             )}
 
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <input
                 type="text"
                 value={searchQuery}
@@ -243,7 +254,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             </div>
 
             {!conversation.isGroup && conversation.otherUser && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 <button
                   onClick={() =>
                     onCall(conversation.otherUser!._id, conversation.name, "audio")
@@ -271,7 +282,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
           </div>
 
           {showPinned && conversation.pinnedMessages && conversation.pinnedMessages.length > 0 && (
-            <div className="px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/50">
+            <div className="px-3 md:px-6 py-2 bg-yellow-900/20 border-b border-yellow-700/50">
               <p className="text-xs text-yellow-400 font-semibold mb-1">📌 Pinned Messages</p>
               {conversation.pinnedMessages.map((pm) => (
                 <div key={pm._id} className="text-xs text-gray-300 truncate py-0.5">
@@ -284,7 +295,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4">
             {displayMessages.map((msg) => (
               <MessageBubble
                 key={msg._id}

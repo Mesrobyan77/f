@@ -315,8 +315,8 @@ export default function CallModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-lg border border-gray-700">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl p-4 md:p-6 w-full max-w-lg border border-gray-700">
         <div className="text-center mb-6">
           {callActive && (
             <p className="text-green-400 text-sm mb-1">

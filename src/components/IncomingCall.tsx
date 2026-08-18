@@ -49,8 +49,8 @@ export default function IncomingCall({ onAccept, onReject }: IncomingCallProps) 
   if (!call) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-      <div className="bg-gray-900 rounded-2xl p-8 w-full max-w-sm border border-gray-700 text-center">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-900 rounded-2xl p-6 md:p-8 w-full max-w-sm border border-gray-700 text-center">
         <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg
             className="w-8 h-8 text-white animate-pulse"
