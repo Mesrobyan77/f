@@ -10,6 +10,7 @@ interface ChatInputProps {
   members?: { user: { _id: string; username: string } | string }[];
   topicId?: string | null;
   isMuted?: boolean;
+  onWatchTogether?: () => void;
 }
 
 const EMOJI_LIST = [
@@ -19,7 +20,7 @@ const EMOJI_LIST = [
   "🤩", "😴", "🤯", "💀", "👻", "🤖", "👽", "🎃",
 ];
 
-export default function ChatInput({ conversationId, replyTo, onClearReply, members, topicId, isMuted }: ChatInputProps) {
+export default function ChatInput({ conversationId, replyTo, onClearReply, members, topicId, isMuted, onWatchTogether }: ChatInputProps) {
   const { socket } = useAuth();
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
@@ -481,6 +482,20 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
               </button>
 
               <div className="border-t border-gray-700 my-1" />
+
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  onWatchTogether?.();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Watch Together</span>
+              </button>
 
               <button
                 onClick={nextTtl}

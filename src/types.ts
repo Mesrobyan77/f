@@ -129,3 +129,36 @@ export interface ConversationData {
 }
 
 export type CallType = "audio" | "video";
+
+export interface SyncQueueItem {
+  _id: string;
+  url: string;
+  videoId: string;
+  title: string;
+  addedBy: User | string;
+  createdAt: string;
+}
+
+export interface SyncChatMessage {
+  _id: string;
+  sender: User | string;
+  text: string;
+  createdAt: string;
+}
+
+export interface SyncSession {
+  _id: string;
+  conversation: string;
+  videoUrl: string;
+  videoId: string;
+  title: string;
+  isPlaying: boolean;
+  currentTime: number;
+  startedBy: User | string;
+  participants: User[];
+  queue: SyncQueueItem[];
+  chat: SyncChatMessage[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -4,9 +4,10 @@ import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
 import PollCard from "./PollCard";
 import GroupSettingsPanel from "./GroupSettingsPanel";
+import SyncPlayPanel from "./SyncPlayPanel";
 import { useAuth } from "../context/AuthContext";
 import { conversationAPI } from "../services/api";
-import type { Message, ConversationData } from "../types";
+import type { Message, ConversationData, SyncSession } from "../types";
 
 interface ChatWindowProps {
   conversationId: string;
@@ -28,6 +29,7 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const [showTopics, setShowTopics] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [syncPlaySession, setSyncPlaySession] = useState<SyncSession | null>(null);
   const headerMenuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -142,6 +144,18 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
       }
     };
 
+    const handleSyncPlayState = (data: { session: SyncSession }) => {
+      if (data.session.conversation === conversationId) {
+        setSyncPlaySession(data.session);
+      }
+    };
+
+    const handleSyncPlayEnded = (data: { conversationId: string }) => {
+      if (data.conversationId === conversationId) {
+        setSyncPlaySession(null);
+      }
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("user_typing", handleTyping);
     socket.on("user_stop_typing", handleStopTyping);
@@ -151,6 +165,8 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
     socket.on("reaction_updated", handleReactionUpdated);
     socket.on("message_pinned", handleMessagePinned);
     socket.on("poll_updated", handlePollUpdated);
+    socket.on("syncplay:state", handleSyncPlayState);
+    socket.on("syncplay:ended", handleSyncPlayEnded);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
@@ -162,6 +178,8 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
       socket.off("reaction_updated", handleReactionUpdated);
       socket.off("message_pinned", handleMessagePinned);
       socket.off("poll_updated", handlePollUpdated);
+      socket.off("syncplay:state", handleSyncPlayState);
+      socket.off("syncplay:ended", handleSyncPlayEnded);
     };
   }, [socket, conversationId, user, activeTopic]);
 
@@ -394,6 +412,21 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
                     <div className="border-t border-gray-700 my-1" />
 
                     <button
+                      onClick={() => {
+                        setShowHeaderMenu(false);
+                        const url = prompt("Paste YouTube URL:");
+                        if (url) socket?.emit("syncplay:start", { conversationId, url });
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Watch Together</span>
+                    </button>
+
+                    <button
                       onClick={() => { setShowHeaderMenu(false); searchInputRef.current?.focus(); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-200 hover:bg-gray-700 transition-colors"
                     >
@@ -486,6 +519,13 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             </div>
           )}
 
+          {/* SyncPlay active banner */}
+          {syncPlaySession && !syncPlaySession.active && (
+            <div className="px-3 md:px-6 py-2 bg-blue-500/10 border-b border-blue-500/30">
+              <p className="text-xs text-blue-400 text-center">Session ended</p>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4">
             {displayMessages.map((msg) => {
@@ -554,6 +594,10 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
             members={conversation.members}
             topicId={activeTopic}
             isMuted={isMuted}
+            onWatchTogether={() => {
+              const url = prompt("Paste YouTube URL:");
+              if (url) socket?.emit("syncplay:start", { conversationId, url });
+            }}
           />
 
           {/* Group settings modal */}
@@ -565,6 +609,15 @@ export default function ChatWindow({ conversationId, onCall, replyTo, setReplyTo
                 setConversation(updated);
                 setShowGroupSettings(false);
               }}
+            />
+          )}
+
+          {/* SyncPlay panel */}
+          {syncPlaySession && syncPlaySession.active && (
+            <SyncPlayPanel
+              session={syncPlaySession}
+              onClose={() => setSyncPlaySession(null)}
+              onStart={(url) => socket?.emit("syncplay:start", { conversationId, url })}
             />
           )}
         </>
