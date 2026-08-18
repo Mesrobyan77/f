@@ -90,4 +90,14 @@ export const conversationAPI = {
     api.post(`/conversations/${id}/draft`, { text }),
 };
 
+export const mediaAPI = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post("/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+};
+
 export default api;

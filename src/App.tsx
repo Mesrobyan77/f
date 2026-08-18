@@ -14,7 +14,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="h-screen bg-gray-950 flex items-center justify-center">
+      <div className="h-[100dvh] h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-gray-400">Loading...</div>
       </div>
     );
@@ -122,7 +122,7 @@ function ChatApp() {
   }, [socket, outgoingCall]);
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white dark:bg-gray-950 light:bg-white light:text-gray-900">
+    <div className="flex h-[100dvh] h-screen bg-gray-950 text-white dark:bg-gray-950 light:bg-white light:text-gray-900">
       <IncomingCall
         onAccept={handleIncomingAccept}
         onReject={() => {}}

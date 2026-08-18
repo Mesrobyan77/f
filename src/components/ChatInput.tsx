@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { mediaAPI } from "../services/api";
 import type { Message } from "../types";
 
 interface ChatInputProps {
@@ -71,7 +72,7 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
 
   const handleSend = (media?: { type: string; url: string; name: string; size: number }) => {
     const trimmed = text.trim();
-    if (!trimmed && !media || !socket) return;
+    if ((!trimmed && !media) || !socket) return;
 
     const data: Record<string, any> = {
       conversationId,
@@ -180,25 +181,22 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
+    try {
+      const res = await mediaAPI.upload(file);
+      const { url, name, size } = res.data;
+
       let type: "image" | "video" | "audio" | "file" = "file";
       if (file.type.startsWith("image/")) type = "image";
       else if (file.type.startsWith("video/")) type = "video";
       else if (file.type.startsWith("audio/")) type = "audio";
 
-      handleSend({
-        type,
-        url: base64,
-        name: file.name,
-        size: file.size,
-      });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+      handleSend({ type, url, name, size });
+    } catch (err) {
+      console.error("File upload failed:", err);
+    }
   };
 
   // Voice recording
@@ -214,18 +212,15 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const reader = new FileReader();
-        reader.onload = () => {
-          handleSend({
-            type: "voice",
-            url: reader.result as string,
-            name: "voice-message",
-            size: blob.size,
-          });
-        };
-        reader.readAsDataURL(blob);
+        const file = new File([blob], "voice-message.webm", { type: "audio/webm" });
+        try {
+          const res = await mediaAPI.upload(file);
+          handleSend({ type: "voice", url: res.data.url, name: "voice-message", size: blob.size });
+        } catch (err) {
+          console.error("Voice upload failed:", err);
+        }
         stream.getTracks().forEach((t) => t.stop());
       };
 
@@ -263,18 +258,15 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
         if (e.data.size > 0) videoChunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(videoChunksRef.current, { type: "video/webm" });
-        const reader = new FileReader();
-        reader.onload = () => {
-          handleSend({
-            type: "video_message",
-            url: reader.result as string,
-            name: "video-message",
-            size: blob.size,
-          });
-        };
-        reader.readAsDataURL(blob);
+        const file = new File([blob], "video-message.webm", { type: "video/webm" });
+        try {
+          const res = await mediaAPI.upload(file);
+          handleSend({ type: "video_message", url: res.data.url, name: "video-message", size: blob.size });
+        } catch (err) {
+          console.error("Video message upload failed:", err);
+        }
         stream.getTracks().forEach((t) => t.stop());
         setVideoRecording(false);
         setVideoCountdown(0);
@@ -417,7 +409,9 @@ export default function ChatInput({ conversationId, replyTo, onClearReply, membe
           type="file"
           accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
           onChange={handleFileUpload}
-          className="hidden"
+          className="absolute -left-[9999px] opacity-0 pointer-events-none"
+          tabIndex={-1}
+          aria-hidden="true"
         />
 
         {/* 3-dot more menu */}
